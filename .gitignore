@@ -1,0 +1,32 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.swp
+
+# Django
+*.sqlite3
+/staticfiles/
+media/
+.env
+
+# Google Cloud Vision Key
+vision_key.json
+
+# Virtual environment
+venv/
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# PyCharm / JetBrains
+.idea/
+
+# Mac/Linux
+.DS_Store

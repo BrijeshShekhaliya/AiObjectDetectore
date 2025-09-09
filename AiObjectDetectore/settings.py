@@ -1,0 +1,133 @@
+"""
+Django settings for AiObjectDetectore project.
+"""
+
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# --------------------------------------------------------
+# Base directory
+# --------------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# --------------------------------------------------------
+# Load environment variables from .env
+# --------------------------------------------------------
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+# --------------------------------------------------------
+# Google Vision API
+# --------------------------------------------------------
+# Ensure GOOGLE_APPLICATION_CREDENTIALS is set for google.cloud.vision
+google_key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if google_key_path:
+    # Convert relative path to absolute
+    google_key_path = str(Path(BASE_DIR / google_key_path).resolve())
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_key_path
+else:
+    raise Exception("GOOGLE_APPLICATION_CREDENTIALS not set in .env")
+
+# --------------------------------------------------------
+# Security
+# --------------------------------------------------------
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret_key")
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+# Allowed hosts
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+
+# --------------------------------------------------------
+# Media (uploads/results)
+# --------------------------------------------------------
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# --------------------------------------------------------
+# Static files (CSS, JavaScript, Images)
+# --------------------------------------------------------
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# --------------------------------------------------------
+# Installed apps
+# --------------------------------------------------------
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'image_ai',  # custom app
+]
+
+# --------------------------------------------------------
+# Middleware
+# --------------------------------------------------------
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# --------------------------------------------------------
+# URL configuration
+# --------------------------------------------------------
+ROOT_URLCONF = 'AiObjectDetectore.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / "templates"],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'AiObjectDetectore.wsgi.application'
+
+# --------------------------------------------------------
+# Database
+# --------------------------------------------------------
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# --------------------------------------------------------
+# Password validation
+# --------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# --------------------------------------------------------
+# Internationalization
+# --------------------------------------------------------
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+# --------------------------------------------------------
+# Default primary key field type
+# --------------------------------------------------------
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
