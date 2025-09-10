@@ -5,6 +5,7 @@ Django settings for AiObjectDetectore project.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url  # Add this import
 
 # --------------------------------------------------------
 # Base directory
@@ -25,17 +26,32 @@ if google_key_path:
     google_key_path = str(Path(BASE_DIR / google_key_path).resolve())
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_key_path
 else:
-    raise Exception("GOOGLE_APPLICATION_CREDENTIALS not set in .env")
+    # This will only raise an error if the variable is missing locally.
+    # On Render, the Secret File will set the variable.
+    print("Warning: GOOGLE_APPLICATION_CREDENTIALS not set in .env")
 
 # --------------------------------------------------------
 # Security
 # --------------------------------------------------------
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret_key")
-DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-# ALLOWED_HOSTS from .env (comma-separated)
-allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost")
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0"]
+# Check if we are running on Render
+IS_RENDER = 'RENDER' in os.environ
+
+if IS_RENDER:
+    DEBUG = False
+else:
+    DEBUG = True  # Keep True for local development
+
+# Automatically configure ALLOWED_HOSTS for Render
+ALLOWED_HOSTS = []
+if IS_RENDER:
+    RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if RENDER_EXTERNAL_HOSTNAME:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+else:
+    # For local development
+    ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost'])
 
 # --------------------------------------------------------
 # Media (uploads/results)
@@ -49,9 +65,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# Use WhiteNoise for production static files
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --------------------------------------------------------
 # Installed apps
@@ -88,7 +101,7 @@ ROOT_URLCONF = 'AiObjectDetectore.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -106,12 +119,22 @@ WSGI_APPLICATION = 'AiObjectDetectore.wsgi.application'
 # --------------------------------------------------------
 # Database
 # --------------------------------------------------------
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if IS_RENDER:
+    # Use Render's PostgreSQL database
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
+else:
+    # Use local SQLite database for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # --------------------------------------------------------
 # Password validation
