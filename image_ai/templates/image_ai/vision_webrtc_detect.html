@@ -6,34 +6,12 @@
     <title>Google Vision Webcam Detection</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/live.css' %}">
-    <link rel="stylesheet" href="{% static 'css/home.css' %}"> {# Assuming home.css has general styles you want #}
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
     <style>
-        /* Specific styles for WebRTC page if needed */
-        #detection-container {
-            position: relative;
-            width: 100%; /* Adjust as needed, e.g., 640px */
-            max-width: 900px; /* Max width for the video container */
-            margin: 20px auto;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #video, #canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-        }
-        .loading {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 1.2em;
-            color: #555;
-        }
+        #detection-container { position: relative; width: 100%; max-width: 900px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
+        #video, #canvas { display: block; width: 100%; height: auto; }
+        #canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        .loading { text-align: center; margin-top: 20px; font-size: 1.2em; color: #555; }
     </style>
 </head>
 <body>
@@ -64,22 +42,31 @@
         const csrftoken = getCookie('csrftoken');
 
         async function setupCamera() {
+            // --- NEW: Logic to find and select the back camera ---
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+            const backCamera = videoDevices.find(device => 
+                device.label.toLowerCase().includes('back') || 
+                device.label.toLowerCase().includes('rear')
+            );
+
+            const constraints = {
+                video: {
+                    deviceId: backCamera ? { exact: backCamera.deviceId } : undefined,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            };
+            // --- END NEW LOGIC ---
+
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 }, 
-                        aspectRatio: { ideal: 1.7777777778 }
-                    }, 
-                    audio: false 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-                    detectionContainer.style.width = `${video.videoWidth}px`;
-                    detectionContainer.style.height = `${video.videoHeight}px`;
-
                     loadingMessage.style.display = 'none';
                     detectFrame();
                 };
@@ -126,26 +113,20 @@
             context.clearRect(0, 0, canvas.width, canvas.height);
             context.font = '16px sans-serif';
             context.lineWidth = 2;
-
             detections.forEach(det => {
                 const vertices = det.box;
                 const w = canvas.width;
                 const h = canvas.height;
-                // Convert normalized vertices back to pixel coordinates
                 const x1 = vertices[0].x * w;
                 const y1 = vertices[0].y * h;
                 const x2 = vertices[2].x * w;
                 const y2 = vertices[2].y * h;
-
                 const label = `${det.class_name} ${det.confidence}`;
-                
-                context.strokeStyle = '#34A853'; // Google Green
+                context.strokeStyle = '#34A853';
                 context.strokeRect(x1, y1, x2 - x1, y2 - y1);
-                
                 const textWidth = context.measureText(label).width;
                 context.fillStyle = '#34A853';
                 context.fillRect(x1 - 1, y1 - 20, textWidth + 10, 20);
-                
                 context.fillStyle = 'white';
                 context.fillText(label, x1 + 5, y1 - 5);
             });

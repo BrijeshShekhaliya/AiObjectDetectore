@@ -6,34 +6,12 @@
     <title>YOLOv8 Webcam Object Detection</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/live.css' %}">
-    <link rel="stylesheet" href="{% static 'css/home.css' %}"> {# Assuming home.css has general styles you want #}
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
     <style>
-        /* Specific styles for WebRTC page if needed */
-        #detection-container {
-            position: relative;
-            width: 100%; /* Adjust as needed, e.g., 640px */
-            max-width: 900px; /* Max width for the video container */
-            margin: 20px auto;
-            border-radius: 8px;
-            overflow: hidden; /* Ensures canvas and video stay within bounds */
-        }
-        #video, #canvas {
-            display: block; /* Remove extra space below inline elements */
-            width: 100%;
-            height: auto;
-        }
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none; /* Allows clicks/interaction to pass through to elements behind */
-        }
-        .loading {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 1.2em;
-            color: #555;
-        }
+        #detection-container { position: relative; width: 100%; max-width: 900px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
+        #video, #canvas { display: block; width: 100%; height: auto; }
+        #canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        .loading { text-align: center; margin-top: 20px; font-size: 1.2em; color: #555; }
     </style>
 </head>
 <body>
@@ -57,33 +35,42 @@
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
         const loadingMessage = document.getElementById('loading-message');
-        const detectionContainer = document.getElementById('detection-container'); // Get the container
+        const detectionContainer = document.getElementById('detection-container');
         let isDetecting = false;
         
         const API_URL = "{% url 'yolo_detect_api' %}";
         const csrftoken = getCookie('csrftoken');
 
         async function setupCamera() {
+            // --- NEW: Logic to find and select the back camera ---
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            // Find the back camera by looking for 'back' or 'rear' in the label
+            const backCamera = videoDevices.find(device => 
+                device.label.toLowerCase().includes('back') || 
+                device.label.toLowerCase().includes('rear')
+            );
+
+            const constraints = {
+                video: {
+                    // If a back camera is found, use its deviceId. Otherwise, use the default.
+                    deviceId: backCamera ? { exact: backCamera.deviceId } : undefined,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            };
+            // --- END NEW LOGIC ---
+
             try {
-                // Request 16:9 aspect ratio or closest if available
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        width: { ideal: 1280 }, // Try for 1280 wide
-                        height: { ideal: 720 }, // Try for 720 high
-                        aspectRatio: { ideal: 1.7777777778 } // 16:9 aspect ratio
-                    },
-                    audio: false
-                });
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
-                    // Set canvas and container dimensions to match video stream
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-                    detectionContainer.style.width = `${video.videoWidth}px`;
-                    detectionContainer.style.height = `${video.videoHeight}px`;
-
                     loadingMessage.style.display = 'none';
-                    detectFrame(); // Start detection loop
+                    detectFrame();
                 };
             } catch (err) {
                 loadingMessage.innerText = "Error: Could not access camera. Please grant permission and refresh. (" + err.name + ")";
@@ -98,65 +85,49 @@
             }
             isDetecting = true;
             
-            // Capture a frame to a temporary canvas to get image data
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = video.videoWidth;
             tempCanvas.height = video.videoHeight;
-            const tempContext = tempCanvas.getContext('2d');
-            tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8); // Use JPEG for smaller size
+            tempCanvas.getContext('2d').drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
 
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
                     body: JSON.stringify({ image: imageData })
                 });
-
                 if (response.ok) {
                     const detections = await response.json();
                     drawDetections(detections);
                 } else {
                     console.error("API request failed:", response.statusText);
-                    // Optionally display an error on the page
                 }
             } catch (error) {
                 console.error("Error during fetch:", error);
-                // Optionally display an error on the page
             } finally {
                 isDetecting = false;
-                requestAnimationFrame(detectFrame); // Continue the loop
+                requestAnimationFrame(detectFrame);
             }
         }
 
         function drawDetections(detections) {
-            context.clearRect(0, 0, canvas.width, canvas.height); // Clear previous drawings
+            context.clearRect(0, 0, canvas.width, canvas.height);
             context.font = '16px sans-serif';
             context.lineWidth = 2;
-
             detections.forEach(det => {
                 const [x1, y1, x2, y2] = det.box;
                 const label = `${det.class_name} ${det.confidence}`;
-                
-                // Draw bounding box
                 context.strokeStyle = 'lime';
                 context.strokeRect(x1, y1, x2 - x1, y2 - y1);
-
-                // Draw label background
                 const textWidth = context.measureText(label).width;
                 context.fillStyle = 'lime';
                 context.fillRect(x1 - 1, y1 - 20, textWidth + 10, 20);
-
-                // Draw label text
                 context.fillStyle = 'black';
                 context.fillText(label, x1 + 5, y1 - 5);
             });
         }
 
-        // Helper function to get CSRF token from cookies
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
