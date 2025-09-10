@@ -66,23 +66,22 @@ def image_detect_page(request):
     if request.method == "POST" and request.FILES.get("image"):
         image_file = request.FILES["image"]
 
-        upload_path = os.path.join("uploads", "input.jpg")
-        full_upload_path = os.path.join(settings.MEDIA_ROOT, upload_path)
-        os.makedirs(os.path.dirname(full_upload_path), exist_ok=True)
+        upload_path = os.path.join(settings.MEDIA_ROOT, "uploads", image_file.name)
+        os.makedirs(os.path.dirname(upload_path), exist_ok=True)
 
-        with open(full_upload_path, "wb+") as f:
+        with open(upload_path, "wb+") as f:
             for chunk in image_file.chunks():
                 f.write(chunk)
 
-        results = model(full_upload_path)
+        results = model(upload_path)
         annotated_img = results[0].plot()
 
-        result_path = os.path.join("results", "detected.jpg")
-        full_result_path = os.path.join(settings.MEDIA_ROOT, result_path)
-        os.makedirs(os.path.dirname(full_result_path), exist_ok=True)
-        cv2.imwrite(full_result_path, annotated_img)
+        result_filename = f"detected_{image_file.name}"
+        result_path = os.path.join(settings.MEDIA_ROOT, "results", result_filename)
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        cv2.imwrite(result_path, annotated_img)
 
-        result_url = settings.MEDIA_URL + result_path
+        result_url = f"{settings.MEDIA_URL}results/{result_filename}"
 
         cls_ids = results[0].boxes.cls
         objects = [model.names[int(c)] for c in cls_ids]
@@ -94,7 +93,7 @@ def image_detect_page(request):
 
 
 # =========================
-# Google Vision: Image Detection
+# Google Vision: Image Detection (EDITED SECTION)
 # =========================
 def vision_image_page(request):
     result_url = None
@@ -103,46 +102,47 @@ def vision_image_page(request):
     if request.method == "POST" and request.FILES.get("image"):
         image_file = request.FILES["image"]
 
-        # Save uploaded image
-        upload_path = os.path.join("uploads", image_file.name)
-        full_upload_path = os.path.join(settings.MEDIA_ROOT, upload_path)
-        os.makedirs(os.path.dirname(full_upload_path), exist_ok=True)
+        upload_path = os.path.join(settings.MEDIA_ROOT, "uploads", image_file.name)
+        os.makedirs(os.path.dirname(upload_path), exist_ok=True)
 
-        with open(full_upload_path, "wb+") as f:
+        with open(upload_path, "wb+") as f:
             for chunk in image_file.chunks():
                 f.write(chunk)
 
-        # Load image using OpenCV
-        img = cv2.imread(full_upload_path)
+        img = cv2.imread(upload_path)
         if img is None:
-            return render(request, "image_ai/vision_image.html", {
-                "result_url": None,
-                "objects": [],
-                "error": "Failed to load image."
-            })
+            return render(request, "image_ai/vision_image.html", {"error": "Failed to load image."})
 
         height, width, _ = img.shape
 
-        # Google Vision API
-        with open(full_upload_path, "rb") as img_file:
-            content = img_file.read()
+        with open(upload_path, "rb") as img_content_file:
+            content = img_content_file.read()
         vision_image = vision.Image(content=content)
         response = client.object_localization(image=vision_image)
 
-        # Draw bounding boxes
+        # Draw bounding boxes and labels on the image
         for obj in response.localized_object_annotations:
-            objects.append(obj.name)
-            box = obj.bounding_poly.normalized_vertices
-            pts = [(int(v.x * width), int(v.y * height)) for v in box]
-            pts = np.array(pts, dtype=np.int32)
-            cv2.polylines(img, [pts], isClosed=True, color=(0, 255, 0), thickness=3)
+            objects.append(f"{obj.name} ({obj.score:.2f})")
 
-        # Save annotated image
-        result_path = os.path.join("results", "vision_detected.jpg")
-        full_result_path = os.path.join(settings.MEDIA_ROOT, result_path)
-        os.makedirs(os.path.dirname(full_result_path), exist_ok=True)
-        cv2.imwrite(full_result_path, img)
-        result_url = settings.MEDIA_URL + result_path
+            box = obj.bounding_poly.normalized_vertices
+            x_min = int(box[0].x * width)
+            y_min = int(box[0].y * height)
+            x_max = int(box[2].x * width)
+            y_max = int(box[2].y * height)
+
+            cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+            label = f"{obj.name} {obj.score:.2f}"
+            (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+            cv2.rectangle(img, (x_min, y_min - text_height - baseline), (x_min + text_width, y_min), (0, 255, 0), -1)
+            cv2.putText(img, label, (x_min, y_min - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
+
+        result_filename = f"vision_detected_{image_file.name}"
+        result_path = os.path.join(settings.MEDIA_ROOT, "results", result_filename)
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        cv2.imwrite(result_path, img)
+
+        result_url = f"{settings.MEDIA_URL}results/{result_filename}"
 
     return render(request, "image_ai/vision_image.html", {
         "result_url": result_url,
@@ -177,10 +177,9 @@ def vision_gen_frames():
             pts = np.array(pts, dtype=np.int32)
             cv2.polylines(frame, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
 
-            # Add label (object name) at the top-left of the bounding box
             if pts.shape[0] > 0:
-                text_pos = (pts[0][0], pts[0][1] - 10)  # slightly above the top-left corner
-                cv2.putText(frame, obj.name, text_pos, 
+                text_pos = (pts[0][0], pts[0][1] - 10)
+                cv2.putText(frame, obj.name, text_pos,
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
         ret, buffer = cv2.imencode('.jpg', frame)
@@ -188,7 +187,6 @@ def vision_gen_frames():
 
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
 
 
 def vision_live_feed(request):

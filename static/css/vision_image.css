@@ -10,6 +10,15 @@ header {
     padding: 20px;
     text-align: center;
 }
+nav a {
+    margin: 0 15px;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+nav a:hover { 
+    text-decoration: underline; 
+}
 .container {
     width: 90%;
     max-width: 900px;
@@ -26,6 +35,8 @@ h2 {
 form input[type="file"] {
     padding: 10px;
     font-size: 16px;
+    display: block;
+    width: 95%;
 }
 form button {
     margin-top: 15px;
@@ -37,7 +48,9 @@ form button {
     border-radius: 8px;
     cursor: pointer;
 }
-form button:hover { background-color: #1e7e34; }
+form button:hover { 
+    background-color: #1e7e34; 
+}
 img {
     margin-top: 25px;
     border: 3px solid #28a745;
@@ -47,8 +60,14 @@ img {
 .objects {
     margin-top: 20px;
 }
-.objects h4 { margin-bottom: 10px; color: #555; }
-.objects ul { list-style: none; padding: 0; }
+.objects h4 { 
+    margin-bottom: 10px; 
+    color: #555; 
+}
+.objects ul { 
+    list-style: none; 
+    padding: 0; 
+}
 .objects ul li {
     display: inline-block;
     background: #28a745;
@@ -57,10 +76,31 @@ img {
     padding: 8px 15px;
     border-radius: 20px;
 }
-nav a {
-    margin: 0 15px;
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
+
+/* =================================== */
+/* === ADD THIS FOR MOBILE DEVICES === */
+/* =================================== */
+@media (max-width: 600px) {
+    .container {
+        /* Reduce padding and margin on small screens */
+        padding: 20px;
+        margin: 15px auto;
+    }
+    
+    nav {
+        /* Allow navigation links to wrap */
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    nav a {
+        margin: 0 5px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
 }
-nav a:hover { text-decoration: underline; }

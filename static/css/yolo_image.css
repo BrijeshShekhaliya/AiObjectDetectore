@@ -5,10 +5,20 @@ body {
     padding: 0;
 }
 header {
-    background-color: #007bff;
+    /* Changed back to a blue color for YOLOv8 */
+    background-color: #007bff; /* A standard blue */
     color: white;
     padding: 20px;
     text-align: center;
+}
+nav a {
+    margin: 0 15px;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+nav a:hover { 
+    text-decoration: underline; 
 }
 .container {
     width: 90%;
@@ -26,41 +36,83 @@ h2 {
 form input[type="file"] {
     padding: 10px;
     font-size: 16px;
+    display: block;
+    width: 95%;
+    margin: 0 auto 15px auto; /* Added margin for file input */
 }
 form button {
     margin-top: 15px;
     padding: 12px 25px;
     font-size: 16px;
-    background-color: #007bff;
+    /* Changed back to a blue color for YOLOv8 */
+    background-color: #007bff; /* A standard blue */
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
 }
-form button:hover { background-color: #0056b3; }
+form button:hover { 
+    /* Changed back to a darker blue for hover */
+    background-color: #0056b3; 
+}
 img {
     margin-top: 25px;
-    border: 3px solid #007bff;
+    /* Changed back to a blue color for YOLOv8 */
+    border: 3px solid #007bff; 
     border-radius: 12px;
     max-width: 100%;
+    height: auto; /* Ensure image scales properly */
 }
 .objects {
     margin-top: 20px;
 }
-.objects h4 { margin-bottom: 10px; color: #555; }
-.objects ul { list-style: none; padding: 0; }
+.objects h4 { 
+    margin-bottom: 10px; 
+    color: #555; 
+}
+.objects ul { 
+    list-style: none; 
+    padding: 0; 
+    display: flex; /* Added for flexible layout of tags */
+    flex-wrap: wrap; /* Added for responsive tags */
+    justify-content: center; /* Center the tags */
+    gap: 8px; /* Space between tags */
+}
 .objects ul li {
     display: inline-block;
-    background: #007bff;
+    /* Changed back to a blue color for YOLOv8 */
+    background: #007bff; 
     color: white;
-    margin: 5px;
+    margin: 5px; /* Keep existing margin */
     padding: 8px 15px;
     border-radius: 20px;
 }
-nav a {
-    margin: 0 15px;
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
+
+/* === MOBILE RESPONSIVE STYLES === */
+@media (max-width: 600px) {
+    .container {
+        padding: 20px;
+        margin: 15px auto;
+    }
+    
+    nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    nav a {
+        margin: 0 5px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Center object list on mobile */
+    .objects {
+        text-align: center;
+    }
 }
-nav a:hover { text-decoration: underline; }

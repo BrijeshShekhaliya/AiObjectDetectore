@@ -15,6 +15,7 @@ header {
 }
 .container {
     display: grid;
+    /* On desktops, we want two columns */
     grid-template-columns: repeat(2, 1fr);
     gap: 25px;
     max-width: 900px;
@@ -63,4 +64,14 @@ header {
 }
 .vision:hover {
     background: #388E3C;
+}
+
+/* =================================== */
+/* === ADD THIS FOR MOBILE DEVICES === */
+/* =================================== */
+@media (max-width: 768px) {
+    .container {
+        /* On screens 768px or less, switch to a single column */
+        grid-template-columns: 1fr;
+    }
 }

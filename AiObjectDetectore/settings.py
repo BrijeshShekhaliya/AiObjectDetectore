@@ -19,7 +19,6 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 # --------------------------------------------------------
 # Google Vision API
 # --------------------------------------------------------
-# Ensure GOOGLE_APPLICATION_CREDENTIALS is set for google.cloud.vision
 google_key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if google_key_path:
     # Convert relative path to absolute
@@ -33,9 +32,10 @@ else:
 # --------------------------------------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret_key")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
-# Allowed hosts
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
+# ALLOWED_HOSTS from .env (comma-separated)
+allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost")
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0"]
 
 # --------------------------------------------------------
 # Media (uploads/results)
@@ -49,6 +49,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Use WhiteNoise for production static files
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --------------------------------------------------------
 # Installed apps
@@ -68,6 +71,7 @@ INSTALLED_APPS = [
 # --------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # for static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

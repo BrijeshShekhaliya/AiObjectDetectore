@@ -38,6 +38,7 @@ img {
     border: 3px solid #4285F4;
     border-radius: 12px;
     max-width: 100%;
+    height: auto; /* Ensures proper scaling */
 }
 .objects {
     margin-top: 20px;
@@ -71,4 +72,32 @@ img {
 }
 .back-btn:hover {
     background: #0c7a32;
+}
+
+/* =================================== */
+/* === ADD THIS FOR MOBILE DEVICES === */
+/* =================================== */
+@media (max-width: 600px) {
+    .container {
+        /* Reduce padding and margin for more space */
+        padding: 20px;
+        margin: 15px auto;
+    }
+    
+    nav {
+        /* Allow navigation links to wrap if they don't fit */
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    nav a {
+        margin: 0 5px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
 }

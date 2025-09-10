@@ -8,9 +8,7 @@ urlpatterns = [
     path("", include("image_ai.urls")),
 ]
 
+# Serve media & static in development
 if settings.DEBUG:
-    # Serve media files
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    
-    # Serve static files
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
