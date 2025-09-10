@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv8 Webcam Object Detection</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/live.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}"> {# Assuming home.css has general styles you want #}
+    <style>
+        /* Specific styles for WebRTC page if needed */
+        #detection-container {
+            position: relative;
+            width: 100%; /* Adjust as needed, e.g., 640px */
+            max-width: 900px; /* Max width for the video container */
+            margin: 20px auto;
+            border-radius: 8px;
+            overflow: hidden; /* Ensures canvas and video stay within bounds */
+        }
+        #video, #canvas {
+            display: block; /* Remove extra space below inline elements */
+            width: 100%;
+            height: auto;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none; /* Allows clicks/interaction to pass through to elements behind */
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>YOLOv8 Real-Time Webcam Detection</h1>
+    </header>
+
+    <main class="container">
+        <div class="video-section">
+            <p id="loading-message" class="loading">Requesting camera access...</p>
+            <div id="detection-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            <a href="{% url 'home' %}" class="btn back-btn">Back to Home</a>
+        </div>
+    </main>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const loadingMessage = document.getElementById('loading-message');
+        const detectionContainer = document.getElementById('detection-container'); // Get the container
+        let isDetecting = false;
+        
+        const API_URL = "{% url 'yolo_detect_api' %}";
+        const csrftoken = getCookie('csrftoken');
+
+        async function setupCamera() {
+            try {
+                // Request 16:9 aspect ratio or closest if available
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: { ideal: 1280 }, // Try for 1280 wide
+                        height: { ideal: 720 }, // Try for 720 high
+                        aspectRatio: { ideal: 1.7777777778 } // 16:9 aspect ratio
+                    },
+                    audio: false
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    // Set canvas and container dimensions to match video stream
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    detectionContainer.style.width = `${video.videoWidth}px`;
+                    detectionContainer.style.height = `${video.videoHeight}px`;
+
+                    loadingMessage.style.display = 'none';
+                    detectFrame(); // Start detection loop
+                };
+            } catch (err) {
+                loadingMessage.innerText = "Error: Could not access camera. Please grant permission and refresh. (" + err.name + ")";
+                console.error("Error accessing camera: ", err);
+            }
+        }
+
+        async function detectFrame() {
+            if (video.readyState < 2 || isDetecting) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            isDetecting = true;
+            
+            // Capture a frame to a temporary canvas to get image data
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempContext = tempCanvas.getContext('2d');
+            tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8); // Use JPEG for smaller size
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                if (response.ok) {
+                    const detections = await response.json();
+                    drawDetections(detections);
+                } else {
+                    console.error("API request failed:", response.statusText);
+                    // Optionally display an error on the page
+                }
+            } catch (error) {
+                console.error("Error during fetch:", error);
+                // Optionally display an error on the page
+            } finally {
+                isDetecting = false;
+                requestAnimationFrame(detectFrame); // Continue the loop
+            }
+        }
+
+        function drawDetections(detections) {
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear previous drawings
+            context.font = '16px sans-serif';
+            context.lineWidth = 2;
+
+            detections.forEach(det => {
+                const [x1, y1, x2, y2] = det.box;
+                const label = `${det.class_name} ${det.confidence}`;
+                
+                // Draw bounding box
+                context.strokeStyle = 'lime';
+                context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                // Draw label background
+                const textWidth = context.measureText(label).width;
+                context.fillStyle = 'lime';
+                context.fillRect(x1 - 1, y1 - 20, textWidth + 10, 20);
+
+                // Draw label text
+                context.fillStyle = 'black';
+                context.fillText(label, x1 + 5, y1 - 5);
+            });
+        }
+
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        setupCamera();
+    </script>
+</body>
+</html>

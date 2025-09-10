@@ -10,26 +10,42 @@
 <body>
     <header>
         <h1>AI Object Detection</h1>
-    </header>
+    </main>
 
     <main class="container">
+        {% if not on_render %}
         <div class="card">
-            <h3>YOLOv8 Live Detection</h3>
-            <p>Real-time object detection using YOLOv8 and your webcam.</p>
+            <h3>YOLOv8 Live Detection (Local Only)</h3>
+            <p>Real-time object detection using your computer's webcam.</p>
             <a href="{% url 'live_page' %}" class="btn yolo">Start Live</a>
         </div>
+        {% endif %}
 
         <div class="card">
             <h3>YOLOv8 Image Detection</h3>
             <p>Upload an image and detect objects using a YOLOv8 model.</p>
             <a href="{% url 'image_detect_page' %}" class="btn yolo">Upload Image</a>
         </div>
+        
+        <div class="card">
+            <h3>Real-Time YOLOv8 Webcam (WebRTC)</h3>
+            <p>Object detection in your browser using your webcam.</p>
+            <a href="{% url 'webrtc_page' %}" class="btn yolo">Start Web Detection</a>
+        </div>
 
         <div class="card">
-            <h3>Google Vision Live</h3>
+            <h3>Real-Time Google Vision (WebRTC)</h3>
+            <p>Object detection in your browser using the Vision API.</p>
+            <a href="{% url 'vision_webrtc_page' %}" class="btn vision">Start Web Detection</a>
+        </div>
+
+        {% if not on_render %}
+        <div class="card">
+            <h3>Google Vision Live (Local Only)</h3>
             <p>Real-time object detection powered by Google Vision API.</p>
             <a href="{% url 'vision_live_page' %}" class="btn vision">Start Live</a>
         </div>
+        {% endif %}
 
         <div class="card">
             <h3>Google Vision Image</h3>
